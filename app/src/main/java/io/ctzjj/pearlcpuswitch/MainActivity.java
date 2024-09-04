@@ -2,7 +2,13 @@ package io.ctzjj.pearlcpuswitch;
 
 import android.app.Activity;
 import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
+import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
+import android.os.PowerManager;
+import android.provider.Settings;
 import android.view.View;
 import android.widget.CheckBox;
 import android.widget.Toast;
@@ -18,6 +24,23 @@ public class MainActivity  extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        Intent intent = new Intent();
+        String packageName = getPackageName();
+        PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
+        if (!pm.isIgnoringBatteryOptimizations(packageName)) {
+            intent.setAction(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS);
+            intent.setData(Uri.parse("package:" + packageName));
+            startActivity(intent);
+        }
+
+        IntentFilter filter = new IntentFilter();
+        filter.addAction(Intent.ACTION_SCREEN_ON);
+        filter.addAction(Intent.ACTION_SCREEN_OFF);
+
+        ScreenReceiver receiver = new ScreenReceiver();
+        registerReceiver(receiver, filter);
+
         cpuCheckBoxMap.put("cpu0", (CheckBox) findViewById(R.id.cpu0));
         cpuCheckBoxMap.put("cpu1", (CheckBox) findViewById(R.id.cpu1));
         cpuCheckBoxMap.put("cpu2", (CheckBox) findViewById(R.id.cpu2));
