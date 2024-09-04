@@ -5,20 +5,25 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.net.Uri;
-import android.os.Build;
 import android.os.Bundle;
 import android.os.PowerManager;
 import android.provider.Settings;
-import android.view.View;
 import android.widget.CheckBox;
 import android.widget.Toast;
 
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 public class MainActivity  extends Activity {
 
-    private final Map<String, CheckBox> cpuCheckBoxMap = new HashMap<>();
+    private final Map<String, CheckBox> lightCpuCheckBoxMap = new HashMap<>();
+
+    private final Map<String, CheckBox> darkCpuCheckBoxMap = new HashMap<>();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -41,21 +46,71 @@ public class MainActivity  extends Activity {
         ScreenReceiver receiver = new ScreenReceiver();
         registerReceiver(receiver, filter);
 
-        cpuCheckBoxMap.put("cpu0", (CheckBox) findViewById(R.id.cpu0));
-        cpuCheckBoxMap.put("cpu1", (CheckBox) findViewById(R.id.cpu1));
-        cpuCheckBoxMap.put("cpu2", (CheckBox) findViewById(R.id.cpu2));
-        cpuCheckBoxMap.put("cpu3", (CheckBox) findViewById(R.id.cpu3));
-        cpuCheckBoxMap.put("cpu4", (CheckBox) findViewById(R.id.cpu4));
-        cpuCheckBoxMap.put("cpu5", (CheckBox) findViewById(R.id.cpu5));
-        cpuCheckBoxMap.put("cpu6", (CheckBox) findViewById(R.id.cpu6));
-        cpuCheckBoxMap.put("cpu7", (CheckBox) findViewById(R.id.cpu7));
+        initLightCpuCheckBox();
 
-        cpuCheckBoxMap.keySet().forEach((key) -> {
-            CheckBox checkBox = cpuCheckBoxMap.get(key);
+        initDarkCpuCheckBox();
+
+
+
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+
+        restoreCheckbox(lightCpuCheckBoxMap, "lightCpus");
+
+        restoreCheckbox(darkCpuCheckBoxMap, "darkCpus");
+    }
+
+    private void restoreCheckbox(Map<String, CheckBox> dataMap, String key) {
+        SwitchConfig switchConfig = new SwitchConfig().setContext(this);
+        String lightCpus = switchConfig.getConfig(key);
+        if (null == lightCpus) {
+            return;
+        }
+        List<String> list = Arrays.asList(lightCpus.split(","));
+        dataMap.keySet().forEach((cpu) -> {
+            CheckBox checkBox = dataMap.get(cpu);
+            if (null == checkBox) {
+                return;
+            }
+
+            if ("darkCpus".equals(key)) {
+                if (list.contains(cpu)) {
+                    checkBox.setChecked(Boolean.FALSE);
+                } else {
+                    checkBox.setChecked(Boolean.TRUE);
+                }
+            } else {
+                if (list.contains(cpu)) {
+                    checkBox.setChecked(Boolean.TRUE);
+                } else {
+                    checkBox.setChecked(Boolean.FALSE);
+                }
+            }
+
+
+        });
+    }
+
+    private void initLightCpuCheckBox() {
+        lightCpuCheckBoxMap.put("cpu0", (CheckBox) findViewById(R.id.cpu0l));
+        lightCpuCheckBoxMap.put("cpu1", (CheckBox) findViewById(R.id.cpu1l));
+        lightCpuCheckBoxMap.put("cpu2", (CheckBox) findViewById(R.id.cpu2l));
+        lightCpuCheckBoxMap.put("cpu3", (CheckBox) findViewById(R.id.cpu3l));
+        lightCpuCheckBoxMap.put("cpu4", (CheckBox) findViewById(R.id.cpu4l));
+        lightCpuCheckBoxMap.put("cpu5", (CheckBox) findViewById(R.id.cpu5l));
+        lightCpuCheckBoxMap.put("cpu6", (CheckBox) findViewById(R.id.cpu6l));
+        lightCpuCheckBoxMap.put("cpu7", (CheckBox) findViewById(R.id.cpu7l));
+
+        lightCpuCheckBoxMap.keySet().forEach((key) -> {
+            CheckBox checkBox = lightCpuCheckBoxMap.get(key);
             if (null == checkBox) {
                 return;
             }
             checkBox.setOnCheckedChangeListener((compoundButton, checked) -> {
+                saveConfig(lightCpuCheckBoxMap, "lightCpus");
                 Boolean aBoolean = CpuSwitch.switchCpu(key, checked);
                 if (Boolean.TRUE.equals(aBoolean)) {
                     Toast.makeText(this, "操作成功", Toast.LENGTH_SHORT).show();
@@ -64,20 +119,44 @@ public class MainActivity  extends Activity {
                 Toast.makeText(this, "操作失败", Toast.LENGTH_SHORT).show();
             });
         });
-
     }
 
-    @Override
-    protected void onResume() {
-        super.onResume();
-        Map<String, Boolean> stringBooleanMap = CpuSwitch.CpuStatus(cpuCheckBoxMap.keySet());
-        stringBooleanMap.keySet().forEach((cpu) -> {
-            Boolean stat = stringBooleanMap.getOrDefault(cpu, true);
-            CheckBox checkBox = cpuCheckBoxMap.get(cpu);
+    private void initDarkCpuCheckBox() {
+        darkCpuCheckBoxMap.put("cpu0", (CheckBox) findViewById(R.id.cpu0d));
+        darkCpuCheckBoxMap.put("cpu1", (CheckBox) findViewById(R.id.cpu1d));
+        darkCpuCheckBoxMap.put("cpu2", (CheckBox) findViewById(R.id.cpu2d));
+        darkCpuCheckBoxMap.put("cpu3", (CheckBox) findViewById(R.id.cpu3d));
+        darkCpuCheckBoxMap.put("cpu4", (CheckBox) findViewById(R.id.cpu4d));
+        darkCpuCheckBoxMap.put("cpu5", (CheckBox) findViewById(R.id.cpu5d));
+        darkCpuCheckBoxMap.put("cpu6", (CheckBox) findViewById(R.id.cpu6d));
+        darkCpuCheckBoxMap.put("cpu7", (CheckBox) findViewById(R.id.cpu7d));
+
+        darkCpuCheckBoxMap.keySet().forEach((key) -> {
+            CheckBox checkBox = darkCpuCheckBoxMap.get(key);
             if (null == checkBox) {
                 return;
             }
-            checkBox.setChecked(Boolean.TRUE.equals(stat));
+            checkBox.setOnCheckedChangeListener((compoundButton, checked) -> {
+                saveConfig(darkCpuCheckBoxMap, "darkCpus");
+            });
         });
+    }
+
+    private void saveConfig(Map<String, CheckBox> dataMap, String key) {
+        List<String> cpus = new ArrayList<>();
+        dataMap.keySet().forEach((k) -> {
+            CheckBox checkBox = dataMap.get(k);
+            if (null == checkBox) {
+                return;
+            }
+            boolean checked = checkBox.isChecked();
+            if ("lightCpus".equals(key) && checked) {
+                cpus.add(k);
+            }
+            if ("darkCpus".equals(key) && !checked) {
+                cpus.add(k);
+            }
+        });
+        new SwitchConfig().setContext(this).saveConfig(key, cpus);
     }
 }
